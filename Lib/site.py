@@ -752,6 +752,7 @@ sys.localized_exceptions['id']["'%.100s' object has no attribute '%U'"] = "Objek
 sys.localized_exceptions['id']['division by zero'] = "pembagian dengan nol"
 sys.localized_exceptions['id']["unsupported operand type(s) for %.100s: '%.100s' and '%.100s'"] = "tipe operan tidak didukung untuk %.100s: '%.100s' dan '%.100s'"
 sys.localized_exceptions['id']["unmatched '%c'"] = "'%c' tanpa pasangan"
+sys.localized_exceptions['id']["invalid syntax"] = "sintaks tidak valid"
 
 
 if __name__ == '__main__':

@@ -328,7 +328,7 @@ _PyPegen_raise_error_known_location(Parser *p, PyObject *errtype,
         end_col_offset = p->tok->cur - p->tok->line_start;
     }
 
-    errstr = PyUnicode_FromFormatV(errmsg, va);
+    errstr = PyUnicode_FromFormatV(PyErr_GetLocalizedException(errmsg), va);
     if (!errstr) {
         goto error;
     }
