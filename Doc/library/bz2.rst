@@ -317,7 +317,7 @@ Examples of usage
 
 Below are some examples of typical usage of the :mod:`bz2` module.
 
-Using :func:`compress` and :func:`decompress` to demonstrate round-trip compression:
+Using :func:`compress` and :func:`decompress` to demonstrate round-trip compression::
 
     >>> import bz2
     >>> data = b"""\
@@ -335,7 +335,7 @@ Using :func:`compress` and :func:`decompress` to demonstrate round-trip compress
     >>> data == d  # Check equality to original object after round-trip
     True
 
-Using :class:`BZ2Compressor` for incremental compression:
+Using :class:`BZ2Compressor` for incremental compression::
 
     >>> import bz2
     >>> def gen_data(chunks=10, chunksize=1000):
@@ -357,7 +357,7 @@ The example above uses a very "nonrandom" stream of data
 (a stream of ``b"z"`` chunks).  Random data tends to compress poorly,
 while ordered, repetitive data usually yields a high compression ratio.
 
-Writing and reading a bzip2-compressed file in binary mode:
+Writing and reading a bzip2-compressed file in binary mode::
 
     >>> import bz2
     >>> data = b"""\

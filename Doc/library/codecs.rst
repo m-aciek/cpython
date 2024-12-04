@@ -302,7 +302,7 @@ Error Handlers
 ^^^^^^^^^^^^^^
 
 To simplify and standardize error handling, codecs may implement different
-error handling schemes by accepting the *errors* string argument:
+error handling schemes by accepting the *errors* string argument::
 
       >>> 'German ß, ♬'.encode(encoding='ascii', errors='backslashreplace')
       b'German \\xdf, \\u266c'

@@ -509,7 +509,7 @@ To calculate hash of some data, you should first construct a hash object by
 calling the appropriate constructor function (:func:`blake2b` or
 :func:`blake2s`), then update it with the data by calling :meth:`~hash.update` on the
 object, and, finally, get the digest out of the object by calling
-:meth:`~hash.digest` (or :meth:`~hash.hexdigest` for hex-encoded string).
+:meth:`~hash.digest` (or :meth:`~hash.hexdigest` for hex-encoded string). ::
 
     >>> from hashlib import blake2b
     >>> h = blake2b()
@@ -519,14 +519,14 @@ object, and, finally, get the digest out of the object by calling
 
 
 As a shortcut, you can pass the first chunk of data to update directly to the
-constructor as the positional argument:
+constructor as the positional argument::
 
     >>> from hashlib import blake2b
     >>> blake2b(b'Hello world').hexdigest()
     '6ff843ba685842aa82031d3f53c48b66326df7639a63d128974c5c14f31a0f33343a8c65551134ed1ae0f2b0dd2bb495dc81039e3eeb0aa1bb0388bbeac29183'
 
 You can call :meth:`hash.update` as many times as you need to iteratively
-update the hash:
+update the hash::
 
     >>> from hashlib import blake2b
     >>> items = [b'Hello', b' ', b'world']
@@ -543,7 +543,7 @@ Using different digest sizes
 
 BLAKE2 has configurable size of digests up to 64 bytes for BLAKE2b and up to 32
 bytes for BLAKE2s. For example, to replace SHA-1 with BLAKE2b without changing
-the size of output, we can tell BLAKE2b to produce 20-byte digests:
+the size of output, we can tell BLAKE2b to produce 20-byte digests::
 
     >>> from hashlib import blake2b
     >>> h = blake2b(digest_size=20)
@@ -557,7 +557,7 @@ the size of output, we can tell BLAKE2b to produce 20-byte digests:
 
 Hash objects with different digest sizes have completely different outputs
 (shorter hashes are *not* prefixes of longer hashes); BLAKE2b and BLAKE2s
-produce different outputs even if the output length is the same:
+produce different outputs even if the output length is the same::
 
     >>> from hashlib import blake2b, blake2s
     >>> blake2b(digest_size=10).hexdigest()
@@ -717,7 +717,7 @@ BLAKE2 can be personalized by passing bytes to the *person* argument::
     'cf68fb5761b9c44e7878bfb2c4c9aea52264a80b75005e65619778de59f383a3'
 
 Personalization together with the keyed mode can also be used to derive different
-keys from a single one.
+keys from a single one. ::
 
     >>> from hashlib import blake2s
     >>> from base64 import b64decode, b64encode

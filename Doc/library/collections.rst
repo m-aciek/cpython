@@ -389,7 +389,7 @@ counts, but the output will exclude results with counts of zero or less.
     False
 
 Unary addition and subtraction are shortcuts for adding an empty counter
-or subtracting from an empty counter.
+or subtracting from an empty counter. ::
 
     >>> c = Counter(a=2, b=-4)
     >>> +c
@@ -771,7 +771,7 @@ stack manipulations such as ``dup``, ``drop``, ``swap``, ``over``, ``pick``,
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Using :class:`list` as the :attr:`~defaultdict.default_factory`, it is easy to group a
-sequence of key-value pairs into a dictionary of lists:
+sequence of key-value pairs into a dictionary of lists::
 
     >>> s = [('yellow', 1), ('blue', 2), ('yellow', 3), ('blue', 4), ('red', 1)]
     >>> d = defaultdict(list)
@@ -787,7 +787,7 @@ function which returns an empty :class:`list`.  The :meth:`!list.append`
 operation then attaches the value to the new list.  When keys are encountered
 again, the look-up proceeds normally (returning the list for that key) and the
 :meth:`!list.append` operation adds another value to the list. This technique is
-simpler and faster than an equivalent technique using :meth:`dict.setdefault`:
+simpler and faster than an equivalent technique using :meth:`dict.setdefault`::
 
     >>> d = {}
     >>> for k, v in s:
@@ -798,7 +798,7 @@ simpler and faster than an equivalent technique using :meth:`dict.setdefault`:
 
 Setting the :attr:`~defaultdict.default_factory` to :class:`int` makes the
 :class:`defaultdict` useful for counting (like a bag or multiset in other
-languages):
+languages)::
 
     >>> s = 'mississippi'
     >>> d = defaultdict(int)
@@ -815,7 +815,7 @@ zero.  The increment operation then builds up the count for each letter.
 The function :func:`int` which always returns zero is just a special case of
 constant functions.  A faster and more flexible way to create constant functions
 is to use a lambda function which can supply any constant value (not just
-zero):
+zero)::
 
     >>> def constant_factory(value):
     ...     return lambda: value
@@ -826,7 +826,7 @@ zero):
     'John ran to <missing>'
 
 Setting the :attr:`~defaultdict.default_factory` to :class:`set` makes the
-:class:`defaultdict` useful for building a dictionary of sets:
+:class:`defaultdict` useful for building a dictionary of sets::
 
     >>> s = [('red', 1), ('blue', 2), ('red', 3), ('blue', 4), ('red', 1), ('blue', 4)]
     >>> d = defaultdict(set)
@@ -1013,7 +1013,7 @@ field names, the method and attribute names start with an underscore.
         Account(type='premium', balance=0)
 
 To retrieve a field whose name is stored in a string, use the :func:`getattr`
-function:
+function::
 
     >>> getattr(p, 'x')
     11
@@ -1048,7 +1048,7 @@ The subclass shown above sets ``__slots__`` to an empty tuple.  This helps
 keep memory requirements low by preventing the creation of instance dictionaries.
 
 Subclassing is not useful for adding new, stored fields.  Instead, simply
-create a new named tuple type from the :attr:`~somenamedtuple._fields` attribute:
+create a new named tuple type from the :attr:`~somenamedtuple._fields` attribute::
 
     >>> Point3D = namedtuple('Point3D', Point._fields + ('z',))
 

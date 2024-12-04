@@ -466,7 +466,7 @@ Finalizer Objects
 
 The main benefit of using :class:`finalize` is that it makes it simple
 to register a callback without needing to preserve the returned finalizer
-object.  For instance
+object.  For instance ::
 
     >>> import weakref
     >>> class Object:
@@ -479,7 +479,7 @@ object.  For instance
     You killed Kenny!
 
 The finalizer can be called directly as well.  However the finalizer
-will invoke the callback at most once.
+will invoke the callback at most once. ::
 
     >>> def callback(x, y, z):
     ...     print("CALLBACK")
@@ -496,7 +496,7 @@ will invoke the callback at most once.
 
 You can unregister a finalizer using its :meth:`~finalize.detach`
 method.  This kills the finalizer and returns the arguments passed to
-the constructor when it was created.
+the constructor when it was created. ::
 
     >>> obj = Object()
     >>> f = weakref.finalize(obj, callback, 1, 2, z=3)

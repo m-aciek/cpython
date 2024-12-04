@@ -2107,7 +2107,7 @@ throughout an application?
 A. Some operations like addition, subtraction, and multiplication by an integer
 will automatically preserve fixed point.  Others operations, like division and
 non-integer multiplication, will change the number of decimal places and need to
-be followed-up with a :meth:`~Decimal.quantize` step:
+be followed-up with a :meth:`~Decimal.quantize` step::
 
     >>> a = Decimal('102.72')           # Initial fixed-point values
     >>> b = Decimal('3.17')
@@ -2123,7 +2123,7 @@ be followed-up with a :meth:`~Decimal.quantize` step:
     Decimal('0.03')
 
 In developing fixed-point applications, it is convenient to define functions
-to handle the :meth:`~Decimal.quantize` step:
+to handle the :meth:`~Decimal.quantize` step::
 
     >>> def mul(x, y, fp=TWOPLACES):
     ...     return (x * y).quantize(fp)
@@ -2178,7 +2178,7 @@ original's two-place significance.
 
 If an application does not care about tracking significance, it is easy to
 remove the exponent and trailing zeroes, losing significance, but keeping the
-value unchanged:
+value unchanged::
 
     >>> def remove_exponent(d):
     ...     return d.quantize(Decimal(1)) if d == d.to_integral() else d.normalize()

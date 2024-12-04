@@ -197,7 +197,7 @@ built-in data types support iteration, the most common being lists and
 dictionaries.  An object is called :term:`iterable` if you can get an iterator
 for it.
 
-You can experiment with the iteration interface manually:
+You can experiment with the iteration interface manually::
 
     >>> L = [1, 2, 3]
     >>> it = iter(L)
@@ -228,7 +228,7 @@ iterator.  These two statements are equivalent::
         print(i)
 
 Iterators can be materialized as lists or tuples by using the :func:`list` or
-:func:`tuple` constructor functions:
+:func:`tuple` constructor functions::
 
     >>> L = [1, 2, 3]
     >>> iterator = iter(L)
@@ -237,7 +237,7 @@ Iterators can be materialized as lists or tuples by using the :func:`list` or
     (1, 2, 3)
 
 Sequence unpacking also supports iterators: if you know an iterator will return
-N elements, you can unpack them into an N-tuple:
+N elements, you can unpack them into an N-tuple::
 
     >>> L = [1, 2, 3]
     >>> iterator = iter(L)
@@ -300,7 +300,7 @@ over values or key/value pairs, you can explicitly call the
 iterator.
 
 The :func:`dict` constructor can accept an iterator that returns a finite stream
-of ``(key, value)`` tuples:
+of ``(key, value)`` tuples::
 
     >>> L = [('Italy', 'Rome'), ('France', 'Paris'), ('US', 'Washington DC')]
     >>> dict(iter(L))
@@ -416,7 +416,7 @@ equivalent to the following Python code::
 This means that when there are multiple ``for...in`` clauses but no ``if``
 clauses, the length of the resulting output will be equal to the product of the
 lengths of all the sequences.  If you have two lists of length 3, the output
-list is 9 elements long:
+list is 9 elements long::
 
     >>> seq1 = 'abc'
     >>> seq2 = (1, 2, 3)
@@ -451,7 +451,7 @@ variables. But, what if the local variables weren't thrown away on exiting a
 function?  What if you could later resume the function where it left off?  This
 is what generators provide; they can be thought of as resumable functions.
 
-Here's the simplest example of a generator function:
+Here's the simplest example of a generator function::
 
     >>> def generate_ints(N):
     ...    for i in range(N):
@@ -470,7 +470,7 @@ suspended and local variables are preserved.  On the next call to the
 generator's :meth:`~generator.__next__` method, the function will resume
 executing.
 
-Here's a sample usage of the ``generate_ints()`` generator:
+Here's a sample usage of the ``generate_ints()`` generator::
 
     >>> gen = generate_ints(3)
     >>> gen  #doctest: +ELLIPSIS
@@ -573,7 +573,7 @@ the internal counter.
             else:
                 i += 1
 
-And here's an example of changing the counter:
+And here's an example of changing the counter::
 
     >>> it = counter(10)  #doctest: +SKIP
     >>> next(it)  #doctest: +SKIP
@@ -647,7 +647,7 @@ You can of course achieve the same effect with a list comprehension.
 sequence elements that meet a certain condition, and is similarly duplicated by
 list comprehensions.  A **predicate** is a function that returns the truth
 value of some condition; for use with :func:`filter`, the predicate must take a
-single value.
+single value. ::
 
     >>> def is_even(x):
     ...     return (x % 2) == 0
@@ -656,7 +656,7 @@ single value.
     [0, 2, 4, 6, 8]
 
 
-This can also be written as a list comprehension:
+This can also be written as a list comprehension::
 
     >>> list(x for x in range(10) if is_even(x))
     [0, 2, 4, 6, 8]
@@ -701,7 +701,7 @@ constructed list's :meth:`~list.sort` method. ::
 The :func:`any(iter) <any>` and :func:`all(iter) <all>` built-ins look at the
 truth values of an iterable's contents.  :func:`any` returns ``True`` if any element
 in the iterable is a true value, and :func:`all` returns ``True`` if all of the
-elements are true values:
+elements are true values::
 
     >>> any([0, 1, 0])
     True
@@ -1050,7 +1050,7 @@ first calculation. ::
 
 If you use :func:`operator.add` with :func:`functools.reduce`, you'll add up all the
 elements of the iterable.  This case is so common that there's a special
-built-in called :func:`sum` to compute it:
+built-in called :func:`sum` to compute it::
 
     >>> import functools, operator
     >>> functools.reduce(operator.add, [1, 2, 3, 4], 0)
