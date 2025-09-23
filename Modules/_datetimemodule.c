@@ -3477,6 +3477,64 @@ date_reduce(PyDateTime_Date *self, PyObject *arg)
     return Py_BuildValue("(ON)", Py_TYPE(self), date_getstate(self));
 }
 
+static PyObject *
+date_end_of_month(PyObject *self, PyObject *args)
+{
+    /* Handle both class method and instance method calls:
+     * - Class method: date.end_of_month(year, month)
+     * - Instance method: instance.end_of_month()
+     */
+    
+    int year, month, last_day;
+    PyObject *tuple, *result;
+    
+    if (PyDate_Check(self)) {
+        /* Called as instance method */
+        if (PyTuple_Size(args) != 0) {
+            PyErr_SetString(PyExc_TypeError,
+                "end_of_month() takes no arguments when called on instance");
+            return NULL;
+        }
+        year = GET_YEAR(self);
+        month = GET_MONTH(self);
+    }
+    else {
+        /* Called as unbound method (class method style) */
+        if (PyTuple_Size(args) != 2) {
+            PyErr_SetString(PyExc_TypeError,
+                "end_of_month() requires both year and month arguments");
+            return NULL;
+        }
+        
+        if (!PyArg_ParseTuple(args, "ii:end_of_month", &year, &month)) {
+            return NULL;
+        }
+        
+        if (check_date_args(year, month, 1) < 0) {
+            return NULL;
+        }
+    }
+    
+    last_day = days_in_month(year, month);
+    
+    /* Create the result date */
+    tuple = Py_BuildValue("iii", year, month, last_day);
+    if (tuple == NULL)
+        return NULL;
+        
+    if (PyDate_Check(self)) {
+        /* Called on instance - use the same type */
+        result = date_new(Py_TYPE(self), tuple, NULL);
+    }
+    else {
+        /* Called as unbound method - use date type */
+        result = date_new(&PyDateTime_DateType, tuple, NULL);
+    }
+    
+    Py_DECREF(tuple);
+    return result;
+}
+
 static PyMethodDef date_methods[] = {
 
     /* Class methods: */
@@ -3536,6 +3594,11 @@ static PyMethodDef date_methods[] = {
 
     {"replace",     (PyCFunction)(void(*)(void))date_replace,      METH_VARARGS | METH_KEYWORDS,
      PyDoc_STR("Return date with new specified fields.")},
+
+    {"end_of_month", (PyCFunction)date_end_of_month,     METH_VARARGS,
+     PyDoc_STR("Return the last day of the month.\n\n"
+               "When called as a class method: date.end_of_month(year, month)\n"
+               "When called as an instance method: instance.end_of_month()")},
 
     {"__reduce__", (PyCFunction)date_reduce,        METH_NOARGS,
      PyDoc_STR("__reduce__() -> (cls, state)")},

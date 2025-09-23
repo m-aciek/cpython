@@ -783,6 +783,7 @@ class date:
     isoweekday(), isocalendar(), isoformat()
     ctime()
     strftime()
+    end_of_month()
 
     Properties (readonly):
     year, month, day
@@ -989,6 +990,35 @@ class date:
         if day is None:
             day = self._day
         return type(self)(year, month, day)
+
+    def end_of_month(year_or_self, month=None):
+        """Return the last day of the month.
+        
+        Usage:
+        - As class method: date.end_of_month(2025, 10)
+        - As instance method: instance.end_of_month()
+        """
+        # Determine if this is called as a class method or instance method
+        if isinstance(year_or_self, date):
+            # Called as instance method: instance.end_of_month()
+            if month is not None:
+                raise TypeError("end_of_month() takes no arguments when called on instance")
+            year = year_or_self._year
+            month = year_or_self._month
+            cls = type(year_or_self)
+        elif isinstance(year_or_self, type) and issubclass(year_or_self, date):
+            # This shouldn't happen in normal usage, but just in case
+            raise TypeError("end_of_month() requires year and month arguments when called on class")
+        else:
+            # Called as unbound method: date.end_of_month(2025, 10)
+            # In this case year_or_self is actually the year
+            if month is None:
+                raise TypeError("end_of_month() requires both year and month arguments")
+            year = year_or_self
+            cls = date
+        
+        last_day = _days_in_month(year, month)
+        return cls(year, month, last_day)
 
     # Comparisons of date objects with other.
 
