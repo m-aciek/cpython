@@ -998,11 +998,17 @@ class date:
         - As class method: date.end_of_month(2025, 10)
         - As instance method: instance.end_of_month()
         
-        Note: When called as a class method on a subclass (e.g., SubClass.end_of_month(2025, 10)),
-        this returns a date instance, not a SubClass instance. Subclasses should define their
-        own class method if they need to return instances of the subclass.
+        Args:
+            year_or_self: Either a year (int) for class method calls, or a date instance for instance method calls
+            month: Month number (1-12) when calling as class method, should be None for instance method calls
+            
+        Returns:
+            date: A date object representing the last day of the specified month
+            
+        Raises:
+            TypeError: If arguments don't match the expected calling pattern
         """
-        # Determine if this is called as a class method or instance method
+        # Type-based dispatch for better type safety
         if isinstance(year_or_self, date):
             # Called as instance method: instance.end_of_month()
             if month is not None:
@@ -1010,13 +1016,14 @@ class date:
             year = year_or_self._year
             month = year_or_self._month
             cls = type(year_or_self)
-        else:
-            # Called as unbound method: date.end_of_month(2025, 10)
-            # or SubClass.end_of_month(2025, 10)
+        elif isinstance(year_or_self, int):
+            # Called as class method: date.end_of_month(2025, 10)
             if month is None:
                 raise TypeError("end_of_month() requires both year and month arguments")
             year = year_or_self
             cls = date  # Always return date instances for class method calls
+        else:
+            raise TypeError(f"Expected int (year) or date instance, got {type(year_or_self).__name__}")
         
         last_day = _days_in_month(year, month)
         return cls(year, month, last_day)
