@@ -1700,6 +1700,76 @@ class TestDate(HarmlessMixedComparison, unittest.TestCase):
         base = cls(2000, 2, 29)
         self.assertRaises(ValueError, base.replace, year=2001)
 
+    def test_end_of_month(self):
+        cls = self.theclass
+        
+        # Test class method usage with various months
+        test_cases = [
+            # (year, month, expected_day)
+            (2025, 1, 31),   # January - 31 days
+            (2025, 2, 28),   # February non-leap year - 28 days
+            (2024, 2, 29),   # February leap year - 29 days
+            (2025, 3, 31),   # March - 31 days
+            (2025, 4, 30),   # April - 30 days
+            (2025, 5, 31),   # May - 31 days
+            (2025, 6, 30),   # June - 30 days
+            (2025, 7, 31),   # July - 31 days
+            (2025, 8, 31),   # August - 31 days
+            (2025, 9, 30),   # September - 30 days
+            (2025, 10, 31),  # October - 31 days
+            (2025, 11, 30),  # November - 30 days
+            (2025, 12, 31),  # December - 31 days
+        ]
+        
+        for year, month, expected_day in test_cases:
+            result = cls.end_of_month(year, month)
+            expected = cls(year, month, expected_day)
+            self.assertEqual(result, expected)
+            self.assertEqual(result.year, year)
+            self.assertEqual(result.month, month)
+            self.assertEqual(result.day, expected_day)
+        
+        # Test instance method usage
+        test_instances = [
+            (cls(2025, 1, 15), cls(2025, 1, 31)),
+            (cls(2024, 2, 1), cls(2024, 2, 29)),   # Leap year
+            (cls(2023, 2, 15), cls(2023, 2, 28)),  # Non-leap year
+            (cls(2025, 4, 10), cls(2025, 4, 30)),
+            (cls(2025, 12, 25), cls(2025, 12, 31)),
+        ]
+        
+        for instance, expected in test_instances:
+            result = instance.end_of_month()
+            self.assertEqual(result, expected)
+        
+        # Test error cases for class method
+        with self.assertRaises(TypeError):
+            cls.end_of_month(2025)  # Missing month
+        
+        # Test error cases for instance method
+        instance = cls(2025, 5, 15)
+        with self.assertRaises(TypeError):
+            instance.end_of_month(2025)  # Extra arguments
+        with self.assertRaises(TypeError):
+            instance.end_of_month(2025, 5)  # Extra arguments
+
+    def test_subclass_end_of_month(self):
+        class DateSubclass(self.theclass):
+            pass
+
+        # Test that subclass instances return subclass type
+        dt = DateSubclass(2025, 6, 15)
+        result = dt.end_of_month()
+        self.assertIs(type(result), DateSubclass)
+        self.assertEqual(result, DateSubclass(2025, 6, 30))
+
+        # Test that class method on subclass returns base date type
+        # (This is the expected behavior since we can't easily determine
+        # the calling class in an unbound method call)
+        result2 = DateSubclass.end_of_month(2025, 6)
+        self.assertIs(type(result2), self.theclass)
+        self.assertEqual(result2, self.theclass(2025, 6, 30))
+
     def test_subclass_replace(self):
         class DateSubclass(self.theclass):
             pass
