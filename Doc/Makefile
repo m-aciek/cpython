@@ -185,7 +185,7 @@ dist:
 	# archive the A4 latex
 	rm -rf build/latex
 	make latex PAPER=a4
-	-sed -i 's/makeindex/makeindex -q/' build/latex/Makefile
+	-sed 's/makeindex/makeindex -q/' build/latex/Makefile > build/latex/Makefile.tmp && mv build/latex/Makefile.tmp build/latex/Makefile
 	(cd build/latex; make clean && make all-pdf && make FMT=pdf zip bz2)
 	cp build/latex/docs-pdf.zip dist/python-$(DISTVERSION)-docs-pdf-a4.zip
 	cp build/latex/docs-pdf.tar.bz2 dist/python-$(DISTVERSION)-docs-pdf-a4.tar.bz2
@@ -193,7 +193,7 @@ dist:
 	# archive the letter latex
 	rm -rf build/latex
 	make latex PAPER=letter
-	-sed -i 's/makeindex/makeindex -q/' build/latex/Makefile
+	-sed 's/makeindex/makeindex -q/' build/latex/Makefile > build/latex/Makefile.tmp && mv build/latex/Makefile.tmp build/latex/Makefile
 	(cd build/latex; make clean && make all-pdf && make FMT=pdf zip bz2)
 	cp build/latex/docs-pdf.zip dist/python-$(DISTVERSION)-docs-pdf-letter.zip
 	cp build/latex/docs-pdf.tar.bz2 dist/python-$(DISTVERSION)-docs-pdf-letter.tar.bz2
