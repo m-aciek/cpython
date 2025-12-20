@@ -9,6 +9,7 @@ __name__ = "datetime"
 import time as _time
 import math as _math
 import sys
+import types as _types
 from operator import index as _index
 
 def _cmp(x, y):
@@ -951,6 +952,8 @@ class timedelta:
     def __reduce__(self):
         return (self.__class__, self._getstate())
 
+    __class_getitem__ = classmethod(_types.GenericAlias)
+
 timedelta.min = timedelta(-999999999)
 timedelta.max = timedelta(days=999999999, hours=23, minutes=59, seconds=59,
                           microseconds=999999)
@@ -1297,6 +1300,8 @@ class date:
     def __reduce__(self):
         return (self.__class__, self._getstate())
 
+    __class_getitem__ = classmethod(_types.GenericAlias)
+
 _date_class = date  # so functions w/ args named "date" can get at the class
 
 date.min = date(1, 1, 1)
@@ -1363,6 +1368,8 @@ class tzinfo:
         else:
             args = ()
         return (self.__class__, args, self.__getstate__())
+
+    __class_getitem__ = classmethod(_types.GenericAlias)
 
 
 class IsoCalendarDate(tuple):
@@ -1770,6 +1777,8 @@ class time:
 
     def __reduce__(self):
         return self.__reduce_ex__(2)
+
+    __class_getitem__ = classmethod(_types.GenericAlias)
 
 _time_class = time  # so functions w/ args named "time" can get at the class
 
@@ -2424,6 +2433,8 @@ class datetime(date):
     def __reduce__(self):
         return self.__reduce_ex__(2)
 
+    __class_getitem__ = classmethod(_types.GenericAlias)
+
 
 datetime.min = datetime(1, 1, 1)
 datetime.max = datetime(9999, 12, 31, 23, 59, 59, 999999)
@@ -2561,6 +2572,8 @@ class timezone(tzinfo):
         if seconds:
             return f'UTC{sign}{hours:02d}:{minutes:02d}:{seconds:02d}'
         return f'UTC{sign}{hours:02d}:{minutes:02d}'
+
+    __class_getitem__ = classmethod(_types.GenericAlias)
 
 UTC = timezone.utc = timezone._create(timedelta(0))
 

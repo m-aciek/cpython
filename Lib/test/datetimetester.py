@@ -126,6 +126,35 @@ class TestModule(unittest.TestCase):
         self.assertEqual(dar(6, -4), -2)
         self.assertEqual(dar(-6, -4), 2)
 
+    def test_class_getitem(self):
+        """Test that datetime types support subscripting via __class_getitem__."""
+        from types import GenericAlias
+        datetime = datetime_module
+        
+        # Test all datetime types can be subscripted
+        types_to_test = [
+            (datetime.date, 'date'),
+            (datetime.time, 'time'),
+            (datetime.datetime, 'datetime'),
+            (datetime.timedelta, 'timedelta'),
+            (datetime.tzinfo, 'tzinfo'),
+            (datetime.timezone, 'timezone'),
+        ]
+        
+        for cls, name in types_to_test:
+            with self.subTest(name=name):
+                # Test single type argument
+                alias = cls[int]
+                self.assertIsInstance(alias, GenericAlias)
+                self.assertIs(alias.__origin__, cls)
+                self.assertEqual(alias.__args__, (int,))
+                
+                # Test multiple type arguments
+                alias_multi = cls[int, str]
+                self.assertIsInstance(alias_multi, GenericAlias)
+                self.assertIs(alias_multi.__origin__, cls)
+                self.assertEqual(alias_multi.__args__, (int, str))
+
 
 #############################################################################
 # tzinfo tests
