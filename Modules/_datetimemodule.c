@@ -3052,9 +3052,6 @@ static PyMethodDef delta_methods[] = {
     {"__reduce__", delta_reduce, METH_NOARGS,
      PyDoc_STR("__reduce__() -> (cls, state)")},
 
-    {"__class_getitem__", Py_GenericAlias, METH_O|METH_CLASS,
-     PyDoc_STR("See PEP 585")},
-
     {NULL,      NULL},
 };
 
@@ -4018,9 +4015,6 @@ static PyMethodDef date_methods[] = {
     {"__reduce__", date_reduce, METH_NOARGS,
      PyDoc_STR("__reduce__() -> (cls, state)")},
 
-    {"__class_getitem__", Py_GenericAlias, METH_O|METH_CLASS,
-     PyDoc_STR("See PEP 585")},
-
     {NULL,      NULL}
 };
 
@@ -4256,9 +4250,6 @@ static PyMethodDef tzinfo_methods[] = {
 
     {"__reduce__",  tzinfo_reduce, METH_NOARGS,
      PyDoc_STR("-> (cls, state)")},
-
-    {"__class_getitem__", Py_GenericAlias, METH_O|METH_CLASS,
-     PyDoc_STR("See PEP 585")},
 
     {NULL, NULL}
 };
@@ -4507,9 +4498,6 @@ static PyMethodDef timezone_methods[] = {
 
     {"__getinitargs__", timezone_getinitargs, METH_NOARGS,
      PyDoc_STR("pickle support")},
-
-    {"__class_getitem__", Py_GenericAlias, METH_O|METH_CLASS,
-     PyDoc_STR("See PEP 585")},
 
     {NULL, NULL}
 };
@@ -5302,9 +5290,6 @@ static PyMethodDef time_methods[] = {
 
     DATETIME_TIME___REDUCE_EX___METHODDEF
     DATETIME_TIME___REDUCE___METHODDEF
-
-    {"__class_getitem__", Py_GenericAlias, METH_O|METH_CLASS,
-     PyDoc_STR("See PEP 585")},
 
     {NULL,      NULL}
 };
