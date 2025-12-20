@@ -937,6 +937,11 @@ Constructor:
    .. versionchanged:: 3.6
       Added the *fold* parameter.
 
+   .. versionchanged:: 3.15
+      :class:`!datetime` now supports the subscript (``[]``) operator for creating
+      :class:`generic aliases <types.GenericAlias>`, e.g., ``datetime[tzinfo]``.
+      See :pep:`585` and :ref:`types-genericalias`.
+
 Other constructors, all class methods:
 
 .. classmethod:: datetime.today()
