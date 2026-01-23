@@ -132,16 +132,16 @@ class TestModule(unittest.TestCase):
         datetime = datetime_module
         
         # Test datetime class can be subscripted
-        alias = datetime.datetime[int]
+        alias = datetime.datetime[tzinfo]
         self.assertIsInstance(alias, GenericAlias)
         self.assertIs(alias.__origin__, datetime.datetime)
-        self.assertEqual(alias.__args__, (int,))
+        self.assertEqual(alias.__args__, (tzinfo,))
         
         # Test multiple type arguments
-        alias_multi = datetime.datetime[int, str]
+        alias_multi = datetime.datetime[tzinfo, str]
         self.assertIsInstance(alias_multi, GenericAlias)
         self.assertIs(alias_multi.__origin__, datetime.datetime)
-        self.assertEqual(alias_multi.__args__, (int, str))
+        self.assertEqual(alias_multi.__args__, (tzinfo, str))
 
 
 #############################################################################
