@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ... other steps ...
-      - uses: actions/checkout@master
+      - uses: actions/checkout@v6
         with:
           repository: python/cpython
           ref: ${{ github.event.client_payload.branch || github.event.inputs.tag }}
