@@ -1,0 +1,29 @@
+name: Trigger Docs PDF Build
+
+on:
+  push:
+    branches:
+      - 'main'
+      - '3.*'
+    paths:
+      - 'Doc/**'
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-pdf-build:
+    name: Trigger python-docs-pdf workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger repository_dispatch event
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.DOCS_PDF_TRIGGER_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/m-aciek/python-docs-pdf/dispatches \
+            -d "{\"event_type\":\"cpython_docs_updated\",\"client_payload\":{\"branch\":\"${{ github.ref_name }}\",\"repository\":\"${{ github.repository }}\",\"sha\":\"${{ github.sha }}\",\"commit_message\":\"${COMMIT_MESSAGE}\"}}"
