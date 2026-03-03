@@ -256,7 +256,7 @@ dist-pdf: venv-pdf
 	mkdir -p dist
 	rm -rf build/latex
 	find dist -name 'python-$(DISTVERSION)-docs-pdf*' -exec rm -rf {} \;
-	$(MAKE) latex PAPER=a4 VENVDIR=$(VENVDIR_PDF)
+	-$(MAKE) latex PAPER=a4 VENVDIR=$(VENVDIR_PDF)
 	# remove zip & bz2 dependency on all-pdf,
 	# as otherwise the full latexmk process is run twice.
 	# ($$ is needed to escape the $; https://www.gnu.org/software/make/manual/make.html#Basics-of-Variable-References)
