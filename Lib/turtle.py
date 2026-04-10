@@ -454,7 +454,19 @@ Canvas = TK.Canvas
 
 
 class _TurtleBackend:
-    """Internal backend adapter protocol for TurtleScreenBase."""
+    """Internal backend adapter protocol for TurtleScreenBase.
+
+    Expected methods include:
+      - draw_polyline(points, style) -> handle
+      - draw_polygon(points, style) -> handle
+      - draw_text(x, y, text, style) -> handle
+      - update_geometry(handle, points)
+      - update_style(handle, style)
+      - delete(handle), clear()
+      - set_background(color), get_background()
+      - flush(), call_later(ms, callback)
+      - bind_item(...), bind_canvas(...)
+    """
 
 
 class _TkCanvasBackend(_TurtleBackend):
@@ -606,6 +618,12 @@ class _TkCanvasBackend(_TurtleBackend):
 
 class _RecordingTurtleBackend(_TurtleBackend):
     """Pure Python recording backend for tests."""
+    _TEXT_CHAR_WIDTH = 8
+    _TEXT_CHAR_HEIGHT = 10
+    _COLOR_NAMES = {
+        'red', 'green', 'blue', 'black', 'white', 'yellow', 'orange',
+        'purple', 'pink', 'brown', 'gray', 'grey', 'cyan', 'magenta',
+    }
 
     def __init__(self, width=400, height=300):
         self.canvas = None
@@ -651,7 +669,8 @@ class _RecordingTurtleBackend(_TurtleBackend):
     def text_bbox(self, handle):
         x, y = self.items[handle]["points"][0]
         text = self.items[handle].get("text", "")
-        return (x, y, x + 8 * len(text), y + 10)
+        return (x, y, x + self._TEXT_CHAR_WIDTH * len(text),
+                y + self._TEXT_CHAR_HEIGHT)
 
     def draw_image(self, image):
         return self._new_item("image", [(0.0, 0.0)], {}, image=image)
@@ -729,7 +748,13 @@ class _RecordingTurtleBackend(_TurtleBackend):
         self.operations.append(("call_later", ms, callback))
 
     def is_color(self, color):
-        return isinstance(color, str) and bool(color)
+        if not isinstance(color, str) or not color:
+            return False
+        if color.startswith("#"):
+            hexdigits = color[1:]
+            return len(hexdigits) in (3, 6) and all(c in "0123456789abcdefABCDEF"
+                                                    for c in hexdigits)
+        return color in self._COLOR_NAMES
 
     def bind_item(self, item, sequence, callback, add=None):
         self.operations.append(("bind_item", item, sequence, callback is not None, add))
@@ -1166,7 +1191,7 @@ class Shape(object):
             if data is not None:
                 photoimage = getattr(TK, "PhotoImage", None)
                 if photoimage is not None:
-                    assert(isinstance(data, photoimage))
+                    assert isinstance(data, photoimage)
         elif type_ == "compound":
             data = []
         else:

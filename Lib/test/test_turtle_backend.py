@@ -6,6 +6,7 @@ from test.support import import_helper
 
 
 def _load_turtle_with_fake_tk():
+    """Import turtle with a minimal fake tkinter module for headless tests."""
     fake_tk = types.ModuleType("tkinter")
     fake_simpledialog = types.ModuleType("tkinter.simpledialog")
     fake_simpledialog.askstring = lambda *args, **kwargs: None
