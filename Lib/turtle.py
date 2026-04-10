@@ -453,6 +453,309 @@ class _Root(TK.Tk):
 Canvas = TK.Canvas
 
 
+class _TurtleBackend:
+    """Internal backend adapter protocol for TurtleScreenBase."""
+
+
+class _TkCanvasBackend(_TurtleBackend):
+    """Tkinter Canvas backend adapter."""
+
+    def __init__(self, canvas):
+        self.canvas = canvas
+
+    def get_canvas_size(self):
+        if isinstance(self.canvas, ScrolledCanvas):
+            return self.canvas.canvwidth, self.canvas.canvheight
+        w = int(self.canvas.cget("width"))
+        h = int(self.canvas.cget("height"))
+        self.canvas.config(scrollregion=(-w//2, -h//2, w//2, h//2))
+        return w, h
+
+    @staticmethod
+    def _flatten(points, default):
+        if not points:
+            return default
+        cl = []
+        for x, y in points:
+            cl.extend([x, y])
+        return cl
+
+    def draw_polyline(self, points, style):
+        return self.canvas.create_line(
+            *self._flatten(points, [0, 0, 0, 0]),
+            **style,
+        )
+
+    def draw_polygon(self, points, style):
+        return self.canvas.create_polygon(
+            *self._flatten(points, [0, 0, 0, 0, 0, 0]),
+            **style,
+        )
+
+    def draw_text(self, x, y, text, style):
+        return self.canvas.create_text(x, y, text=text, **style)
+
+    def text_bbox(self, handle):
+        return self.canvas.bbox(handle)
+
+    def draw_image(self, image):
+        return self.canvas.create_image(0, 0, image=image)
+
+    def update_geometry(self, handle, points):
+        self.canvas.coords(handle, *self._flatten(points, []))
+
+    def update_style(self, handle, style):
+        self.canvas.itemconfigure(handle, **style)
+
+    def update_image(self, handle, pos, image):
+        self.canvas.coords(handle, *self._flatten([pos], []))
+        self.canvas.itemconfigure(handle, image=image)
+
+    def set_background_image(self, handle, image):
+        self.canvas.itemconfigure(handle, image=image)
+        self.canvas.tag_lower(handle)
+
+    def delete(self, handle):
+        self.canvas.delete(handle)
+
+    def clear(self):
+        self.canvas.delete("all")
+
+    def set_background(self, color):
+        self.canvas.config(bg=color)
+
+    def get_background(self):
+        return self.canvas.cget("bg")
+
+    def raise_item(self, handle):
+        self.canvas.tag_raise(handle)
+
+    def item_type(self, handle):
+        return self.canvas.type(handle)
+
+    def item_points(self, handle):
+        cl = self.canvas.coords(handle)
+        return [(cl[i], cl[i+1]) for i in range(0, len(cl), 2)]
+
+    def all_items(self):
+        return self.canvas.find_all()
+
+    def set_scrollregion(self, srx1, sry1, srx2, sry2):
+        self.canvas.config(scrollregion=(srx1, sry1, srx2, sry2))
+
+    def window_size(self):
+        width = self.canvas.winfo_width()
+        if width <= 1:
+            width = self.canvas['width']
+        height = self.canvas.winfo_height()
+        if height <= 1:
+            height = self.canvas['height']
+        return width, height
+
+    def flush(self):
+        self.canvas.update()
+
+    def delay(self, delay):
+        self.canvas.after(delay)
+
+    def call_later(self, ms, callback):
+        if ms == 0:
+            self.canvas.after_idle(callback)
+        else:
+            self.canvas.after(ms, callback)
+
+    def is_color(self, color):
+        try:
+            self.canvas.winfo_rgb(color)
+            return True
+        except TK.TclError:
+            return False
+
+    def bind_item(self, item, sequence, callback, add=None):
+        if callback is None:
+            self.canvas.tag_unbind(item, sequence)
+        else:
+            self.canvas.tag_bind(item, sequence, callback, add)
+
+    def bind_canvas(self, sequence, callback, add=None):
+        if callback is None:
+            self.canvas.unbind(sequence, None)
+        else:
+            self.canvas.bind(sequence, callback, add)
+
+    def canvas_to_screen(self, x, y):
+        return self.canvas.canvasx(x), self.canvas.canvasy(y)
+
+    def focus(self):
+        self.canvas.focus_force()
+
+    def mainloop(self):
+        self.canvas.tk.mainloop()
+
+    def postscript(self):
+        return self.canvas.postscript()
+
+    def blank_image(self):
+        img = TK.PhotoImage(width=1, height=1, master=self.canvas)
+        img.blank()
+        return img
+
+    def load_image(self, filename):
+        return TK.PhotoImage(file=filename, master=self.canvas)
+
+
+class _RecordingTurtleBackend(_TurtleBackend):
+    """Pure Python recording backend for tests."""
+
+    def __init__(self, width=400, height=300):
+        self.canvas = None
+        self.width = width
+        self.height = height
+        self.items = {}
+        self.displaylist = []
+        self.operations = []
+        self._next_handle = 1
+        self.background = "white"
+        self.scrollregion = (-width//2, -height//2, width//2, height//2)
+
+    def get_canvas_size(self):
+        return self.width, self.height
+
+    def _new_item(self, kind, points=(), style=None, **extra):
+        handle = self._next_handle
+        self._next_handle += 1
+        self.items[handle] = {
+            "type": kind,
+            "points": [tuple(p) for p in points],
+            "style": dict(style or {}),
+            **extra,
+        }
+        self.displaylist.append(handle)
+        return handle
+
+    def draw_polyline(self, points, style):
+        handle = self._new_item("line", points, style)
+        self.operations.append(("draw_polyline", handle, [tuple(p) for p in points], dict(style)))
+        return handle
+
+    def draw_polygon(self, points, style):
+        handle = self._new_item("polygon", points, style)
+        self.operations.append(("draw_polygon", handle, [tuple(p) for p in points], dict(style)))
+        return handle
+
+    def draw_text(self, x, y, text, style):
+        handle = self._new_item("text", [(x, y)], style, text=text)
+        self.operations.append(("draw_text", handle, x, y, text, dict(style)))
+        return handle
+
+    def text_bbox(self, handle):
+        x, y = self.items[handle]["points"][0]
+        text = self.items[handle].get("text", "")
+        return (x, y, x + 8 * len(text), y + 10)
+
+    def draw_image(self, image):
+        return self._new_item("image", [(0.0, 0.0)], {}, image=image)
+
+    def update_geometry(self, handle, points):
+        if handle in self.items:
+            self.items[handle]["points"] = [tuple(p) for p in points]
+            self.operations.append(("update_geometry", handle, [tuple(p) for p in points]))
+
+    def update_style(self, handle, style):
+        if handle in self.items:
+            self.items[handle]["style"].update(style)
+            self.operations.append(("update_style", handle, dict(style)))
+
+    def update_image(self, handle, pos, image):
+        if handle in self.items:
+            self.items[handle]["points"] = [tuple(pos)]
+            self.items[handle]["image"] = image
+
+    def set_background_image(self, handle, image):
+        if handle in self.items:
+            self.items[handle]["image"] = image
+            if handle in self.displaylist:
+                self.displaylist.remove(handle)
+                self.displaylist.insert(0, handle)
+
+    def delete(self, handle):
+        if handle == "all":
+            self.clear()
+            return
+        self.items.pop(handle, None)
+        if handle in self.displaylist:
+            self.displaylist.remove(handle)
+        self.operations.append(("delete", handle))
+
+    def clear(self):
+        self.items.clear()
+        self.displaylist.clear()
+        self.operations.append(("clear",))
+
+    def set_background(self, color):
+        self.background = color
+        self.operations.append(("set_background", color))
+
+    def get_background(self):
+        return self.background
+
+    def raise_item(self, handle):
+        if handle in self.displaylist:
+            self.displaylist.remove(handle)
+            self.displaylist.append(handle)
+
+    def item_type(self, handle):
+        return self.items[handle]["type"]
+
+    def item_points(self, handle):
+        return list(self.items[handle]["points"])
+
+    def all_items(self):
+        return tuple(self.displaylist)
+
+    def set_scrollregion(self, srx1, sry1, srx2, sry2):
+        self.scrollregion = (srx1, sry1, srx2, sry2)
+
+    def window_size(self):
+        return self.width, self.height
+
+    def flush(self):
+        pass
+
+    def delay(self, delay):
+        pass
+
+    def call_later(self, ms, callback):
+        self.operations.append(("call_later", ms, callback))
+
+    def is_color(self, color):
+        return isinstance(color, str) and bool(color)
+
+    def bind_item(self, item, sequence, callback, add=None):
+        self.operations.append(("bind_item", item, sequence, callback is not None, add))
+
+    def bind_canvas(self, sequence, callback, add=None):
+        self.operations.append(("bind_canvas", sequence, callback is not None, add))
+
+    def canvas_to_screen(self, x, y):
+        return x, y
+
+    def focus(self):
+        pass
+
+    def mainloop(self):
+        pass
+
+    def postscript(self):
+        raise TurtleGraphicsError("postscript() requires a Tk canvas backend")
+
+    def blank_image(self):
+        return None
+
+    def load_image(self, filename):
+        return filename
+
+
 class TurtleScreenBase(object):
     """Provide the basic graphics functionality.
        Interface between Tkinter and turtle.py.
@@ -464,25 +767,18 @@ class TurtleScreenBase(object):
     def _blankimage(self):
         """return a blank image object
         """
-        img = TK.PhotoImage(width=1, height=1, master=self.cv)
-        img.blank()
-        return img
+        return self._backend.blank_image()
 
     def _image(self, filename):
         """return an image object containing the
         imagedata from an image file named filename.
         """
-        return TK.PhotoImage(file=filename, master=self.cv)
+        return self._backend.load_image(filename)
 
-    def __init__(self, cv):
-        self.cv = cv
-        if isinstance(cv, ScrolledCanvas):
-            w = self.cv.canvwidth
-            h = self.cv.canvheight
-        else:  # expected: ordinary TK.Canvas
-            w = int(self.cv.cget("width"))
-            h = int(self.cv.cget("height"))
-            self.cv.config(scrollregion = (-w//2, -h//2, w//2, h//2 ))
+    def __init__(self, cv, *, backend=None):
+        self._backend = backend if backend is not None else _TkCanvasBackend(cv)
+        self.cv = self._backend.canvas
+        w, h = self._backend.get_canvas_size()
         self.canvwidth = w
         self.canvheight = h
         self.xscale = self.yscale = 1.0
@@ -490,7 +786,7 @@ class TurtleScreenBase(object):
     def _createpoly(self):
         """Create an invisible polygon item on canvas self.cv)
         """
-        return self.cv.create_polygon((0, 0, 0, 0, 0, 0), fill="", outline="")
+        return self._backend.draw_polygon((), {"fill": "", "outline": ""})
 
     def _drawpoly(self, polyitem, coordlist, fill=None,
                   outline=None, width=None, top=False):
@@ -507,21 +803,23 @@ class TurtleScreenBase(object):
         for x, y in coordlist:
             cl.append(x * self.xscale)
             cl.append(-y * self.yscale)
-        self.cv.coords(polyitem, *cl)
+        self._backend.update_geometry(polyitem, tuple(zip(cl[0::2], cl[1::2])))
+        style = {}
         if fill is not None:
-            self.cv.itemconfigure(polyitem, fill=fill)
+            style["fill"] = fill
         if outline is not None:
-            self.cv.itemconfigure(polyitem, outline=outline)
+            style["outline"] = outline
         if width is not None:
-            self.cv.itemconfigure(polyitem, width=width)
+            style["width"] = width
+        if style:
+            self._backend.update_style(polyitem, style)
         if top:
-            self.cv.tag_raise(polyitem)
+            self._backend.raise_item(polyitem)
 
     def _createline(self):
         """Create an invisible line item on canvas self.cv)
         """
-        return self.cv.create_line(0, 0, 0, 0, fill="", width=2,
-                                   capstyle = TK.ROUND)
+        return self._backend.draw_polyline((), {"fill": "", "width": 2, "capstyle": TK.ROUND})
 
     def _drawline(self, lineitem, coordlist=None,
                   fill=None, width=None, top=False):
@@ -538,47 +836,48 @@ class TurtleScreenBase(object):
             for x, y in coordlist:
                 cl.append(x * self.xscale)
                 cl.append(-y * self.yscale)
-            self.cv.coords(lineitem, *cl)
+            self._backend.update_geometry(lineitem, tuple(zip(cl[0::2], cl[1::2])))
+        style = {}
         if fill is not None:
-            self.cv.itemconfigure(lineitem, fill=fill)
+            style["fill"] = fill
         if width is not None:
-            self.cv.itemconfigure(lineitem, width=width)
+            style["width"] = width
+        if style:
+            self._backend.update_style(lineitem, style)
         if top:
-            self.cv.tag_raise(lineitem)
+            self._backend.raise_item(lineitem)
 
     def _delete(self, item):
         """Delete graphics item from canvas.
         If item is"all" delete all graphics items.
         """
-        self.cv.delete(item)
+        if item == "all":
+            self._backend.clear()
+        else:
+            self._backend.delete(item)
 
     def _update(self):
         """Redraw graphics items on canvas
         """
-        self.cv.update()
+        self._backend.flush()
 
     def _delay(self, delay):
         """Delay subsequent canvas actions for delay ms."""
-        self.cv.after(delay)
+        self._backend.delay(delay)
 
     def _iscolorstring(self, color):
         """Check if the string color is a legal Tkinter color string.
         """
-        try:
-            rgb = self.cv.winfo_rgb(color)
-            ok = True
-        except TK.TclError:
-            ok = False
-        return ok
+        return self._backend.is_color(color)
 
     def _bgcolor(self, color=None):
         """Set canvas' backgroundcolor if color is not None,
         else return backgroundcolor."""
         if color is not None:
-            self.cv.config(bg = color)
+            self._backend.set_background(color)
             self._update()
         else:
-            return self.cv.cget("bg")
+            return self._backend.get_background()
 
     def _write(self, pos, txt, align, font, pencolor):
         """Write txt at pos in canvas with specified font
@@ -589,9 +888,10 @@ class TurtleScreenBase(object):
         x = x * self.xscale
         y = y * self.yscale
         anchor = {"left":"sw", "center":"s", "right":"se" }
-        item = self.cv.create_text(x-1, -y, text = txt, anchor = anchor[align],
-                                        fill = pencolor, font = font)
-        x0, y0, x1, y1 = self.cv.bbox(item)
+        item = self._backend.draw_text(
+            x-1, -y, txt, {"anchor": anchor[align], "fill": pencolor, "font": font}
+        )
+        x0, y0, x1, y1 = self._backend.text_bbox(item)
         return item, x1-1
 
     def _onclick(self, item, fun, num=1, add=None):
@@ -601,13 +901,13 @@ class TurtleScreenBase(object):
         num, the number of the mouse-button defaults to 1
         """
         if fun is None:
-            self.cv.tag_unbind(item, "<Button-%s>" % num)
+            self._backend.bind_item(item, "<Button-%s>" % num, None)
         else:
             def eventfun(event):
-                x, y = (self.cv.canvasx(event.x)/self.xscale,
-                        -self.cv.canvasy(event.y)/self.yscale)
+                sx, sy = self._backend.canvas_to_screen(event.x, event.y)
+                x, y = (sx/self.xscale, -sy/self.yscale)
                 fun(x, y)
-            self.cv.tag_bind(item, "<Button-%s>" % num, eventfun, add)
+            self._backend.bind_item(item, "<Button-%s>" % num, eventfun, add)
 
     def _onrelease(self, item, fun, num=1, add=None):
         """Bind fun to mouse-button-release event on turtle.
@@ -619,14 +919,14 @@ class TurtleScreenBase(object):
         then _onscreensclick-event.
         """
         if fun is None:
-            self.cv.tag_unbind(item, "<Button%s-ButtonRelease>" % num)
+            self._backend.bind_item(item, "<Button%s-ButtonRelease>" % num, None)
         else:
             def eventfun(event):
-                x, y = (self.cv.canvasx(event.x)/self.xscale,
-                        -self.cv.canvasy(event.y)/self.yscale)
+                sx, sy = self._backend.canvas_to_screen(event.x, event.y)
+                x, y = (sx/self.xscale, -sy/self.yscale)
                 fun(x, y)
-            self.cv.tag_bind(item, "<Button%s-ButtonRelease>" % num,
-                             eventfun, add)
+            self._backend.bind_item(item, "<Button%s-ButtonRelease>" % num,
+                                    eventfun, add)
 
     def _ondrag(self, item, fun, num=1, add=None):
         """Bind fun to mouse-move-event (with pressed mouse button) on turtle.
@@ -638,16 +938,16 @@ class TurtleScreenBase(object):
         mouse-click event on that turtle.
         """
         if fun is None:
-            self.cv.tag_unbind(item, "<Button%s-Motion>" % num)
+            self._backend.bind_item(item, "<Button%s-Motion>" % num, None)
         else:
             def eventfun(event):
                 try:
-                    x, y = (self.cv.canvasx(event.x)/self.xscale,
-                           -self.cv.canvasy(event.y)/self.yscale)
+                    sx, sy = self._backend.canvas_to_screen(event.x, event.y)
+                    x, y = (sx/self.xscale, -sy/self.yscale)
                     fun(x, y)
                 except Exception:
                     pass
-            self.cv.tag_bind(item, "<Button%s-Motion>" % num, eventfun, add)
+            self._backend.bind_item(item, "<Button%s-Motion>" % num, eventfun, add)
 
     def _onscreenclick(self, fun, num=1, add=None):
         """Bind fun to mouse-click event on canvas.
@@ -659,24 +959,24 @@ class TurtleScreenBase(object):
         then _onscreensclick-event.
         """
         if fun is None:
-            self.cv.unbind("<Button-%s>" % num)
+            self._backend.bind_canvas("<Button-%s>" % num, None)
         else:
             def eventfun(event):
-                x, y = (self.cv.canvasx(event.x)/self.xscale,
-                        -self.cv.canvasy(event.y)/self.yscale)
+                sx, sy = self._backend.canvas_to_screen(event.x, event.y)
+                x, y = (sx/self.xscale, -sy/self.yscale)
                 fun(x, y)
-            self.cv.bind("<Button-%s>" % num, eventfun, add)
+            self._backend.bind_canvas("<Button-%s>" % num, eventfun, add)
 
     def _onkeyrelease(self, fun, key):
         """Bind fun to key-release event of key.
         Canvas must have focus. See method listen
         """
         if fun is None:
-            self.cv.unbind("<KeyRelease-%s>" % key, None)
+            self._backend.bind_canvas("<KeyRelease-%s>" % key, None)
         else:
             def eventfun(event):
                 fun()
-            self.cv.bind("<KeyRelease-%s>" % key, eventfun)
+            self._backend.bind_canvas("<KeyRelease-%s>" % key, eventfun)
 
     def _onkeypress(self, fun, key=None):
         """If key is given, bind fun to key-press event of key.
@@ -685,56 +985,51 @@ class TurtleScreenBase(object):
         """
         if fun is None:
             if key is None:
-                self.cv.unbind("<KeyPress>", None)
+                self._backend.bind_canvas("<KeyPress>", None)
             else:
-                self.cv.unbind("<KeyPress-%s>" % key, None)
+                self._backend.bind_canvas("<KeyPress-%s>" % key, None)
         else:
             def eventfun(event):
                 fun()
             if key is None:
-                self.cv.bind("<KeyPress>", eventfun)
+                self._backend.bind_canvas("<KeyPress>", eventfun)
             else:
-                self.cv.bind("<KeyPress-%s>" % key, eventfun)
+                self._backend.bind_canvas("<KeyPress-%s>" % key, eventfun)
 
     def _listen(self):
         """Set focus on canvas (in order to collect key-events)
         """
-        self.cv.focus_force()
+        self._backend.focus()
 
     def _ontimer(self, fun, t):
         """Install a timer, which calls fun after t milliseconds.
         """
-        if t == 0:
-            self.cv.after_idle(fun)
-        else:
-            self.cv.after(t, fun)
+        self._backend.call_later(t, fun)
 
     def _createimage(self, image):
         """Create and return image item on canvas.
         """
-        return self.cv.create_image(0, 0, image=image)
+        return self._backend.draw_image(image)
 
     def _drawimage(self, item, pos, image):
         """Configure image item as to draw image object
         at position (x,y) on canvas)
         """
         x, y = pos
-        self.cv.coords(item, (x * self.xscale, -y * self.yscale))
-        self.cv.itemconfig(item, image=image)
+        self._backend.update_image(item, (x * self.xscale, -y * self.yscale), image)
 
     def _setbgpic(self, item, image):
         """Configure image item as to draw image object
         at center of canvas. Set item to the first item
         in the displaylist, so it will be drawn below
         any other item ."""
-        self.cv.itemconfig(item, image=image)
-        self.cv.tag_lower(item)
+        self._backend.set_background_image(item, image)
 
     def _type(self, item):
         """Return 'line' or 'polygon' or 'image' depending on
         type of item.
         """
-        return self.cv.type(item)
+        return self._backend.item_type(item)
 
     def _pointlist(self, item):
         """returns list of coordinate-pairs of points of item
@@ -744,24 +1039,24 @@ class TurtleScreenBase(object):
         [(0.0, 9.9999999999999982), (0.0, -9.9999999999999982),
         (9.9999999999999982, 0.0)]
         >>> """
-        cl = self.cv.coords(item)
-        pl = [(cl[i], -cl[i+1]) for i in range(0, len(cl), 2)]
+        cl = self._backend.item_points(item)
+        pl = [(x, -y) for x, y in cl]
         return  pl
 
     def _setscrollregion(self, srx1, sry1, srx2, sry2):
-        self.cv.config(scrollregion=(srx1, sry1, srx2, sry2))
+        self._backend.set_scrollregion(srx1, sry1, srx2, sry2)
 
     def _rescale(self, xscalefactor, yscalefactor):
-        items = self.cv.find_all()
+        items = self._backend.all_items()
         for item in items:
-            coordinates = list(self.cv.coords(item))
+            coordinates = [coord for xy in self._backend.item_points(item) for coord in xy]
             newcoordlist = []
             while coordinates:
                 x, y = coordinates[:2]
                 newcoordlist.append(x * xscalefactor)
                 newcoordlist.append(y * yscalefactor)
                 coordinates = coordinates[2:]
-            self.cv.coords(item, *newcoordlist)
+            self._backend.update_geometry(item, tuple(zip(newcoordlist[0::2], newcoordlist[1::2])))
 
     def _resize(self, canvwidth=None, canvheight=None, bg=None):
         """Resize the canvas the turtles are drawing on. Does
@@ -781,13 +1076,7 @@ class TurtleScreenBase(object):
     def _window_size(self):
         """ Return the width and height of the turtle window.
         """
-        width = self.cv.winfo_width()
-        if width <= 1:  # the window isn't managed by a geometry manager
-            width = self.cv['width']
-        height = self.cv.winfo_height()
-        if height <= 1: # the window isn't managed by a geometry manager
-            height = self.cv['height']
-        return width, height
+        return self._backend.window_size()
 
     def mainloop(self):
         """Starts event loop - calling Tkinter's mainloop function.
@@ -802,7 +1091,7 @@ class TurtleScreenBase(object):
         >>> screen.mainloop()
 
         """
-        self.cv.tk.mainloop()
+        self._backend.mainloop()
 
     def textinput(self, title, prompt):
         """Pop up a dialog window for input of a string.
@@ -874,7 +1163,10 @@ class Shape(object):
             if isinstance(data, list):
                 data = tuple(data)
         elif type_ == "image":
-            assert(isinstance(data, TK.PhotoImage))
+            if data is not None:
+                photoimage = getattr(TK, "PhotoImage", None)
+                if photoimage is not None:
+                    assert(isinstance(data, photoimage))
         elif type_ == "compound":
             data = []
         else:
@@ -952,9 +1244,15 @@ class TurtleScreen(TurtleScreenBase):
     """
     _RUNNING = True
 
+    @classmethod
+    def _from_backend(cls, backend, mode=_CFG["mode"],
+                      colormode=_CFG["colormode"], delay=_CFG["delay"]):
+        return cls(None, mode=mode, colormode=colormode, delay=delay, _backend=backend)
+
     def __init__(self, cv, mode=_CFG["mode"],
-                 colormode=_CFG["colormode"], delay=_CFG["delay"]):
-        TurtleScreenBase.__init__(self, cv)
+                 colormode=_CFG["colormode"], delay=_CFG["delay"],
+                 _backend=None):
+        TurtleScreenBase.__init__(self, cv, backend=_backend)
 
         self._shapes = {
                    "arrow" : Shape("polygon", ((-10,0), (10,0), (0,10))),
@@ -984,11 +1282,11 @@ class TurtleScreen(TurtleScreenBase):
         self._colormode = _CFG["colormode"]
         self._keys = []
         self.clear()
-        if sys.platform == 'darwin':
+        if sys.platform == 'darwin' and self.cv is not None:
             # Force Turtle window to the front on OS X. This is needed because
             # the Turtle window will show behind the Terminal window when you
             # start the demo from the command line.
-            rootwindow = cv.winfo_toplevel()
+            rootwindow = self.cv.winfo_toplevel()
             rootwindow.call('wm', 'attributes', '.', '-topmost', '1')
             rootwindow.call('wm', 'attributes', '.', '-topmost', '0')
 
@@ -1559,7 +1857,7 @@ class TurtleScreen(TurtleScreenBase):
                  " must be one of {'.ps', '.eps'}"
             )
 
-        postscript = self.cv.postscript()
+        postscript = self._backend.postscript()
         filename.write_text(postscript)
 
     onscreenclick = onclick
