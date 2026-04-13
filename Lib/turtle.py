@@ -332,7 +332,6 @@ def _init_tk():
     actually needed, so that ``import turtle`` works without tkinter being
     available (e.g. when using _RecordingTurtleBackend in headless tests).
     """
-    global _TK_INITIALIZED
     if _TK_INITIALIZED:
         return
 
@@ -470,7 +469,7 @@ def _init_tk():
     g['ScrolledCanvas'] = ScrolledCanvas
     g['_Root'] = _Root
     g['Canvas'] = TK.Canvas
-    _TK_INITIALIZED = True
+    g['_TK_INITIALIZED'] = True
 
 
 def __getattr__(name):
