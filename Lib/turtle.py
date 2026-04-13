@@ -98,7 +98,6 @@ Behind the scenes there are some features included with possible
 extensions in mind. These will be commented and documented elsewhere.
 """
 
-import tkinter as TK
 import types
 import math
 import time
@@ -109,7 +108,6 @@ from os.path import isfile, split, join
 from pathlib import Path
 from contextlib import contextmanager
 from copy import deepcopy
-from tkinter import simpledialog
 
 _tg_classes = ['ScrolledCanvas', 'TurtleScreen', 'Screen',
                'RawTurtle', 'Turtle', 'RawPen', 'Pen', 'Shape', 'Vec2D']
@@ -324,133 +322,166 @@ def __forwardmethods(fromClass, toClass, toPart, exclude = ()):
         setattr(fromClass, method, d[method])   ### NEWU!
 
 
-class ScrolledCanvas(TK.Frame):
-    """Modeled after the scrolled canvas class from Grayons's Tkinter book.
+_TK_INITIALIZED = False
 
-    Used as the default canvas, which pops up automatically when
-    using turtle graphics functions or the Turtle class.
+
+def _init_tk():
+    """Lazily import tkinter and define the Tk-dependent classes.
+
+    Defers importing tkinter until the first Tk-backed screen or canvas is
+    actually needed, so that ``import turtle`` works without tkinter being
+    available (e.g. when using _RecordingTurtleBackend in headless tests).
     """
-    def __init__(self, master, width=500, height=350,
-                                          canvwidth=600, canvheight=500):
-        TK.Frame.__init__(self, master, width=width, height=height)
-        self._rootwindow = self.winfo_toplevel()
-        self.width, self.height = width, height
-        self.canvwidth, self.canvheight = canvwidth, canvheight
-        self.bg = "white"
-        self._canvas = TK.Canvas(master, width=width, height=height,
-                                 bg=self.bg, relief=TK.SUNKEN, borderwidth=2)
-        self.hscroll = TK.Scrollbar(master, command=self._canvas.xview,
-                                    orient=TK.HORIZONTAL)
-        self.vscroll = TK.Scrollbar(master, command=self._canvas.yview)
-        self._canvas.configure(xscrollcommand=self.hscroll.set,
-                               yscrollcommand=self.vscroll.set)
-        self.rowconfigure(0, weight=1, minsize=0)
-        self.columnconfigure(0, weight=1, minsize=0)
-        self._canvas.grid(padx=1, in_ = self, pady=1, row=0,
-                column=0, rowspan=1, columnspan=1, sticky='news')
-        self.vscroll.grid(padx=1, in_ = self, pady=1, row=0,
-                column=1, rowspan=1, columnspan=1, sticky='news')
-        self.hscroll.grid(padx=1, in_ = self, pady=1, row=1,
-                column=0, rowspan=1, columnspan=1, sticky='news')
-        self.reset()
-        self._rootwindow.bind('<Configure>', self.onResize)
+    global _TK_INITIALIZED
+    if _TK_INITIALIZED:
+        return
 
-    def reset(self, canvwidth=None, canvheight=None, bg = None):
-        """Adjust canvas and scrollbars according to given canvas size."""
-        if canvwidth:
-            self.canvwidth = canvwidth
-        if canvheight:
-            self.canvheight = canvheight
-        if bg:
-            self.bg = bg
-        self._canvas.config(bg=bg,
-                        scrollregion=(-self.canvwidth//2, -self.canvheight//2,
-                                       self.canvwidth//2, self.canvheight//2))
-        self._canvas.xview_moveto(0.5*(self.canvwidth - self.width + 30) /
-                                                               self.canvwidth)
-        self._canvas.yview_moveto(0.5*(self.canvheight- self.height + 30) /
-                                                              self.canvheight)
-        self.adjustScrolls()
+    import tkinter as TK
+    from tkinter import simpledialog
 
+    class ScrolledCanvas(TK.Frame):
+        """Modeled after the scrolled canvas class from Grayons's Tkinter book.
 
-    def adjustScrolls(self):
-        """ Adjust scrollbars according to window- and canvas-size.
+        Used as the default canvas, which pops up automatically when
+        using turtle graphics functions or the Turtle class.
         """
-        cwidth = self._canvas.winfo_width()
-        cheight = self._canvas.winfo_height()
-        self._canvas.xview_moveto(0.5*(self.canvwidth-cwidth)/self.canvwidth)
-        self._canvas.yview_moveto(0.5*(self.canvheight-cheight)/self.canvheight)
-        if cwidth < self.canvwidth or cheight < self.canvheight:
-            self.hscroll.grid(padx=1, in_ = self, pady=1, row=1,
-                              column=0, rowspan=1, columnspan=1, sticky='news')
+        def __init__(self, master, width=500, height=350,
+                                              canvwidth=600, canvheight=500):
+            TK.Frame.__init__(self, master, width=width, height=height)
+            self._rootwindow = self.winfo_toplevel()
+            self.width, self.height = width, height
+            self.canvwidth, self.canvheight = canvwidth, canvheight
+            self.bg = "white"
+            self._canvas = TK.Canvas(master, width=width, height=height,
+                                     bg=self.bg, relief=TK.SUNKEN, borderwidth=2)
+            self.hscroll = TK.Scrollbar(master, command=self._canvas.xview,
+                                        orient=TK.HORIZONTAL)
+            self.vscroll = TK.Scrollbar(master, command=self._canvas.yview)
+            self._canvas.configure(xscrollcommand=self.hscroll.set,
+                                   yscrollcommand=self.vscroll.set)
+            self.rowconfigure(0, weight=1, minsize=0)
+            self.columnconfigure(0, weight=1, minsize=0)
+            self._canvas.grid(padx=1, in_ = self, pady=1, row=0,
+                    column=0, rowspan=1, columnspan=1, sticky='news')
             self.vscroll.grid(padx=1, in_ = self, pady=1, row=0,
-                              column=1, rowspan=1, columnspan=1, sticky='news')
-        else:
-            self.hscroll.grid_forget()
-            self.vscroll.grid_forget()
+                    column=1, rowspan=1, columnspan=1, sticky='news')
+            self.hscroll.grid(padx=1, in_ = self, pady=1, row=1,
+                    column=0, rowspan=1, columnspan=1, sticky='news')
+            self.reset()
+            self._rootwindow.bind('<Configure>', self.onResize)
 
-    def onResize(self, event):
-        """self-explanatory"""
-        self.adjustScrolls()
-
-    def bbox(self, *args):
-        """ 'forward' method, which canvas itself has inherited...
-        """
-        return self._canvas.bbox(*args)
-
-    def cget(self, *args, **kwargs):
-        """ 'forward' method, which canvas itself has inherited...
-        """
-        return self._canvas.cget(*args, **kwargs)
-
-    def config(self, *args, **kwargs):
-        """ 'forward' method, which canvas itself has inherited...
-        """
-        self._canvas.config(*args, **kwargs)
-
-    def bind(self, *args, **kwargs):
-        """ 'forward' method, which canvas itself has inherited...
-        """
-        self._canvas.bind(*args, **kwargs)
-
-    def unbind(self, *args, **kwargs):
-        """ 'forward' method, which canvas itself has inherited...
-        """
-        self._canvas.unbind(*args, **kwargs)
-
-    def focus_force(self):
-        """ 'forward' method, which canvas itself has inherited...
-        """
-        self._canvas.focus_force()
-
-__forwardmethods(ScrolledCanvas, TK.Canvas, '_canvas')
+        def reset(self, canvwidth=None, canvheight=None, bg = None):
+            """Adjust canvas and scrollbars according to given canvas size."""
+            if canvwidth:
+                self.canvwidth = canvwidth
+            if canvheight:
+                self.canvheight = canvheight
+            if bg:
+                self.bg = bg
+            self._canvas.config(bg=bg,
+                            scrollregion=(-self.canvwidth//2, -self.canvheight//2,
+                                           self.canvwidth//2, self.canvheight//2))
+            self._canvas.xview_moveto(0.5*(self.canvwidth - self.width + 30) /
+                                                                   self.canvwidth)
+            self._canvas.yview_moveto(0.5*(self.canvheight- self.height + 30) /
+                                                                  self.canvheight)
+            self.adjustScrolls()
 
 
-class _Root(TK.Tk):
-    """Root class for Screen based on Tkinter."""
-    def __init__(self):
-        TK.Tk.__init__(self)
+        def adjustScrolls(self):
+            """ Adjust scrollbars according to window- and canvas-size.
+            """
+            cwidth = self._canvas.winfo_width()
+            cheight = self._canvas.winfo_height()
+            self._canvas.xview_moveto(0.5*(self.canvwidth-cwidth)/self.canvwidth)
+            self._canvas.yview_moveto(0.5*(self.canvheight-cheight)/self.canvheight)
+            if cwidth < self.canvwidth or cheight < self.canvheight:
+                self.hscroll.grid(padx=1, in_ = self, pady=1, row=1,
+                                  column=0, rowspan=1, columnspan=1, sticky='news')
+                self.vscroll.grid(padx=1, in_ = self, pady=1, row=0,
+                                  column=1, rowspan=1, columnspan=1, sticky='news')
+            else:
+                self.hscroll.grid_forget()
+                self.vscroll.grid_forget()
 
-    def setupcanvas(self, width, height, cwidth, cheight):
-        self._canvas = ScrolledCanvas(self, width, height, cwidth, cheight)
-        self._canvas.pack(expand=1, fill="both")
+        def onResize(self, event):
+            """self-explanatory"""
+            self.adjustScrolls()
 
-    def _getcanvas(self):
-        return self._canvas
+        def bbox(self, *args):
+            """ 'forward' method, which canvas itself has inherited...
+            """
+            return self._canvas.bbox(*args)
 
-    def set_geometry(self, width, height, startx, starty):
-        self.geometry("%dx%d%+d%+d"%(width, height, startx, starty))
+        def cget(self, *args, **kwargs):
+            """ 'forward' method, which canvas itself has inherited...
+            """
+            return self._canvas.cget(*args, **kwargs)
 
-    def ondestroy(self, destroy):
-        self.wm_protocol("WM_DELETE_WINDOW", destroy)
+        def config(self, *args, **kwargs):
+            """ 'forward' method, which canvas itself has inherited...
+            """
+            self._canvas.config(*args, **kwargs)
 
-    def win_width(self):
-        return self.winfo_screenwidth()
+        def bind(self, *args, **kwargs):
+            """ 'forward' method, which canvas itself has inherited...
+            """
+            self._canvas.bind(*args, **kwargs)
 
-    def win_height(self):
-        return self.winfo_screenheight()
+        def unbind(self, *args, **kwargs):
+            """ 'forward' method, which canvas itself has inherited...
+            """
+            self._canvas.unbind(*args, **kwargs)
 
-Canvas = TK.Canvas
+        def focus_force(self):
+            """ 'forward' method, which canvas itself has inherited...
+            """
+            self._canvas.focus_force()
+
+    __forwardmethods(ScrolledCanvas, TK.Canvas, '_canvas')
+
+    class _Root(TK.Tk):
+        """Root class for Screen based on Tkinter."""
+        def __init__(self):
+            TK.Tk.__init__(self)
+
+        def setupcanvas(self, width, height, cwidth, cheight):
+            self._canvas = ScrolledCanvas(self, width, height, cwidth, cheight)
+            self._canvas.pack(expand=1, fill="both")
+
+        def _getcanvas(self):
+            return self._canvas
+
+        def set_geometry(self, width, height, startx, starty):
+            self.geometry("%dx%d%+d%+d"%(width, height, startx, starty))
+
+        def ondestroy(self, destroy):
+            self.wm_protocol("WM_DELETE_WINDOW", destroy)
+
+        def win_width(self):
+            return self.winfo_screenwidth()
+
+        def win_height(self):
+            return self.winfo_screenheight()
+
+    g = globals()
+    g['TK'] = TK
+    g['simpledialog'] = simpledialog
+    g['ScrolledCanvas'] = ScrolledCanvas
+    g['_Root'] = _Root
+    g['Canvas'] = TK.Canvas
+    _TK_INITIALIZED = True
+
+
+def __getattr__(name):
+    _lazy_tk_names = frozenset({'TK', 'Canvas', 'ScrolledCanvas', '_Root', 'simpledialog'})
+    if name in _lazy_tk_names:
+        _init_tk()
+        try:
+            return globals()[name]
+        except KeyError:
+            pass
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 class _TurtleBackend:
@@ -801,6 +832,8 @@ class TurtleScreenBase(object):
         return self._backend.load_image(filename)
 
     def __init__(self, cv, *, backend=None):
+        if backend is None:
+            _init_tk()
         self._backend = backend if backend is not None else _TkCanvasBackend(cv)
         self.cv = self._backend.canvas
         w, h = self._backend.get_canvas_size()
@@ -844,7 +877,7 @@ class TurtleScreenBase(object):
     def _createline(self):
         """Create an invisible line item on canvas self.cv)
         """
-        return self._backend.draw_polyline((), {"fill": "", "width": 2, "capstyle": TK.ROUND})
+        return self._backend.draw_polyline((), {"fill": "", "width": 2, "capstyle": "round"})
 
     def _drawline(self, lineitem, coordlist=None,
                   fill=None, width=None, top=False):
@@ -4144,6 +4177,7 @@ class _Screen(TurtleScreen):
     _title = _CFG["title"]
 
     def __init__(self):
+        _init_tk()
         if _Screen._root is None:
             _Screen._root = self._root = _Root()
             self._root.title(_Screen._title)
