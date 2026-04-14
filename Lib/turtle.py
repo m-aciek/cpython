@@ -322,9 +322,6 @@ def __forwardmethods(fromClass, toClass, toPart, exclude = ()):
         setattr(fromClass, method, d[method])   ### NEWU!
 
 
-_TK_INITIALIZED = False
-
-
 def _init_tk():
     """Lazily import tkinter and define the Tk-dependent classes.
 
@@ -332,11 +329,11 @@ def _init_tk():
     actually needed, so that ``import turtle`` works without tkinter being
     available (e.g. when using _RecordingTurtleBackend in headless tests).
     """
-    if _TK_INITIALIZED:
+    global TK, Canvas, ScrolledCanvas, _Root
+    if TK is not None:
         return
 
     import tkinter as TK
-    from tkinter import simpledialog
 
     class ScrolledCanvas(TK.Frame):
         """Modeled after the scrolled canvas class from Grayons's Tkinter book.
@@ -463,17 +460,14 @@ def _init_tk():
         def win_height(self):
             return self.winfo_screenheight()
 
-    g = globals()
-    g['TK'] = TK
-    g['simpledialog'] = simpledialog
-    g['ScrolledCanvas'] = ScrolledCanvas
-    g['_Root'] = _Root
-    g['Canvas'] = TK.Canvas
-    g['_TK_INITIALIZED'] = True
+    Canvas = TK.Canvas
 
 
 def __getattr__(name):
-    _lazy_tk_names = frozenset({'TK', 'Canvas', 'ScrolledCanvas', '_Root', 'simpledialog'})
+    # TK, Canvas, ScrolledCanvas are part of turtle's public API and must
+    # remain accessible after lazy-init.  _Root is internal but historically
+    # visible; keep it for back-compat.
+    _lazy_tk_names = frozenset({'TK', 'Canvas', 'ScrolledCanvas', '_Root'})
     if name in _lazy_tk_names:
         _init_tk()
         try:
@@ -607,6 +601,7 @@ class _TkCanvasBackend(_TurtleBackend):
             self.canvas.after(ms, callback)
 
     def is_color(self, color):
+        import tkinter as TK
         try:
             self.canvas.winfo_rgb(color)
             return True
@@ -638,11 +633,13 @@ class _TkCanvasBackend(_TurtleBackend):
         return self.canvas.postscript()
 
     def blank_image(self):
+        import tkinter as TK
         img = TK.PhotoImage(width=1, height=1, master=self.canvas)
         img.blank()
         return img
 
     def load_image(self, filename):
+        import tkinter as TK
         return TK.PhotoImage(file=filename, master=self.canvas)
 
 
@@ -1163,6 +1160,7 @@ class TurtleScreenBase(object):
         >>> screen.textinput("NIM", "Name of first player:")
 
         """
+        from tkinter import simpledialog
         return simpledialog.askstring(title, prompt, parent=self.cv)
 
     def numinput(self, title, prompt, default=None, minval=None, maxval=None):
@@ -1183,6 +1181,7 @@ class TurtleScreenBase(object):
         >>> screen.numinput("Poker", "Your stakes:", 1000, minval=10, maxval=10000)
 
         """
+        from tkinter import simpledialog
         return simpledialog.askfloat(title, prompt, initialvalue=default,
                                      minvalue=minval, maxvalue=maxval,
                                      parent=self.cv)
