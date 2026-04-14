@@ -322,6 +322,9 @@ def __forwardmethods(fromClass, toClass, toPart, exclude = ()):
         setattr(fromClass, method, d[method])   ### NEWU!
 
 
+TK = None  # set by _init_tk(); sentinel for lazy Tkinter initialisation
+
+
 def _init_tk():
     """Lazily import tkinter and define the Tk-dependent classes.
 
