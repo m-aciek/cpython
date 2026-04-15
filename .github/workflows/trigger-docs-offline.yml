@@ -1,0 +1,50 @@
+name: Trigger Docs PDF Build
+
+on:
+  push:
+    branches:
+      - 'main'
+      - '3.*'
+    paths:
+      - 'Doc/**'
+
+permissions:
+  contents: read
+
+jobs:
+  trigger-pdf-build:
+    name: Trigger python-docs-pdf workflow
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger repository_dispatch event
+        env:
+          BRANCH: ${{ github.ref_name }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          # Use jq to properly escape JSON values
+          payload=$(jq -n \
+            --arg event_type "cpython_docs_updated" \
+            --arg branch "$BRANCH" \
+            --arg repository "$REPOSITORY" \
+            --arg sha "$SHA" \
+            --arg commit_message "$COMMIT_MESSAGE" \
+            '{
+              event_type: $event_type,
+              client_payload: {
+                branch: $branch,
+                repository: $repository,
+                sha: $sha,
+                commit_message: $commit_message
+              }
+            }')
+
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.DOCS_PDF_TRIGGER_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            -H "Content-Type: application/json" \
+            https://api.github.com/repos/m-aciek/python-docs-pdf/dispatches \
+            -d "$payload"
