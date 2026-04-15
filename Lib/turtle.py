@@ -109,6 +109,9 @@ from pathlib import Path
 from contextlib import contextmanager
 from copy import deepcopy
 
+lazy import tkinter as TK
+lazy from tkinter import simpledialog
+
 _tg_classes = ['ScrolledCanvas', 'TurtleScreen', 'Screen',
                'RawTurtle', 'Turtle', 'RawPen', 'Pen', 'Shape', 'Vec2D']
 _tg_screen_functions = ['addshape', 'bgcolor', 'bgpic', 'bye',
@@ -322,21 +325,19 @@ def __forwardmethods(fromClass, toClass, toPart, exclude = ()):
         setattr(fromClass, method, d[method])   ### NEWU!
 
 
-TK = None  # set by _init_tk(); sentinel for lazy Tkinter initialisation
+_TK_INITIALIZED = False
 
 
 def _init_tk():
-    """Lazily import tkinter and define the Tk-dependent classes.
+    """Lazily define the Tk-dependent classes.
 
-    Defers importing tkinter until the first Tk-backed screen or canvas is
-    actually needed, so that ``import turtle`` works without tkinter being
-    available (e.g. when using _RecordingTurtleBackend in headless tests).
+    Defers defining Tk-dependent classes until the first Tk-backed screen or
+    canvas is actually needed, so that ``import turtle`` works without tkinter
+    being available (e.g. when using _RecordingTurtleBackend in headless tests).
     """
-    global TK, Canvas, ScrolledCanvas, _Root
-    if TK is not None:
+    global _TK_INITIALIZED, Canvas, ScrolledCanvas, _Root
+    if _TK_INITIALIZED:
         return
-
-    import tkinter as TK
 
     class ScrolledCanvas(TK.Frame):
         """Modeled after the scrolled canvas class from Grayons's Tkinter book.
@@ -464,13 +465,14 @@ def _init_tk():
             return self.winfo_screenheight()
 
     Canvas = TK.Canvas
+    _TK_INITIALIZED = True
 
 
 def __getattr__(name):
-    # TK, Canvas, ScrolledCanvas are part of turtle's public API and must
+    # Canvas, ScrolledCanvas are part of turtle's public API and must
     # remain accessible after lazy-init.  _Root is internal but historically
     # visible; keep it for back-compat.
-    _lazy_tk_names = frozenset({'TK', 'Canvas', 'ScrolledCanvas', '_Root'})
+    _lazy_tk_names = frozenset({'Canvas', 'ScrolledCanvas', '_Root'})
     if name in _lazy_tk_names:
         _init_tk()
         try:
@@ -604,7 +606,6 @@ class _TkCanvasBackend(_TurtleBackend):
             self.canvas.after(ms, callback)
 
     def is_color(self, color):
-        import tkinter as TK
         try:
             self.canvas.winfo_rgb(color)
             return True
@@ -636,13 +637,11 @@ class _TkCanvasBackend(_TurtleBackend):
         return self.canvas.postscript()
 
     def blank_image(self):
-        import tkinter as TK
         img = TK.PhotoImage(width=1, height=1, master=self.canvas)
         img.blank()
         return img
 
     def load_image(self, filename):
-        import tkinter as TK
         return TK.PhotoImage(file=filename, master=self.canvas)
 
 
@@ -1163,7 +1162,6 @@ class TurtleScreenBase(object):
         >>> screen.textinput("NIM", "Name of first player:")
 
         """
-        from tkinter import simpledialog
         return simpledialog.askstring(title, prompt, parent=self.cv)
 
     def numinput(self, title, prompt, default=None, minval=None, maxval=None):
@@ -1184,7 +1182,6 @@ class TurtleScreenBase(object):
         >>> screen.numinput("Poker", "Your stakes:", 1000, minval=10, maxval=10000)
 
         """
-        from tkinter import simpledialog
         return simpledialog.askfloat(title, prompt, initialvalue=default,
                                      minvalue=minval, maxvalue=maxval,
                                      parent=self.cv)
@@ -4104,7 +4101,7 @@ class RawTurtle(TPen, TNavigator):
         if action == "rot":
             angle, degPAU = data
             self._rotate(-angle*degPAU/self._degreesPerAU)
-            dummy = self.undobuffer.pop()
+            self.undobuffer.pop()
         elif action == "stamp":
             stitem = data[0]
             self.clearstamp(stitem)
