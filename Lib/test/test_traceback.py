@@ -1827,6 +1827,8 @@ class TestKeywordTypoSuggestions(unittest.TestCase):
         ("function f():", "def"),
         ("func f():", "def"),
         ("void f():", "def"),
+        # gh-156047: Earlier names must not exhaust the candidate budget.
+        ("a=b=c=d=e=f=g=h=i=0\ndef fn():\n  retrun True", "return"),
     ]
 
     def test_keyword_suggestions_from_file(self):
@@ -1846,6 +1848,18 @@ class TestKeywordTypoSuggestions(unittest.TestCase):
                 rc, stdout, stderr = assert_python_failure('-c', source)
                 stderr_text = stderr.decode('utf-8')
                 self.assertIn(f"Did you mean '{expected_kw}'", stderr_text)
+
+    def test_keyword_suggestion_before_reported_error_line(self):
+        source = "def fn():\n  retrun True\n# reported error line\n"
+        exc = SyntaxError(
+            "invalid syntax",
+            ("<string>", 3, 1, "# reported error line\n", 3, 2),
+        )
+        exc._metadata = (0, 0, source)
+
+        result = ''.join(traceback.format_exception_only(exc))
+
+        self.assertIn("Did you mean 'return'", result)
 
     def test_no_keyword_suggestion_for_comma_errors(self):
         # When the parser identifies a missing comma, don't suggest

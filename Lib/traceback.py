@@ -1430,7 +1430,6 @@ class TracebackException:
         line, offset, source = self._exc_metadata
         end_line = int(self.lineno) if self.lineno is not None else 0
         lines = None
-        from_filename = False
 
         if source is None:
             if self.filename:
@@ -1439,8 +1438,6 @@ class TracebackException:
                         lines = f.read().splitlines()
                 except Exception:
                     line, end_line, offset = 0,1,0
-                else:
-                    from_filename = True
             lines = lines if lines is not None else self.text.splitlines()
         else:
             lines = source.splitlines()
@@ -1462,17 +1459,19 @@ class TracebackException:
             return  # Original code compiles or is incomplete - can't validate fixes
 
         error_lines = error_code.splitlines()
-        tokens = tokenize.generate_tokens(io.StringIO(error_code).readline)
+        tokens = [
+            token
+            for token in tokenize.generate_tokens(io.StringIO(error_code).readline)
+            if token.type == tokenize.NAME
+        ]
+        # Look for typos on the reported error line first. If the parser only
+        # fails after an earlier typo, the remaining lines are still searched.
+        the_end = end_line if line == 0 else end_line + 1
+        tokens.sort(key=lambda token: token.start[0] + line != the_end)
         tokens_left_to_process = 10
         import difflib
         for token in tokens:
             start, end = token.start, token.end
-            if token.type != tokenize.NAME:
-                continue
-            # Only consider NAME tokens on the same line as the error
-            the_end = end_line if line == 0 else end_line + 1
-            if from_filename and token.start[0]+line != the_end:
-                continue
             wrong_name = token.string
             if wrong_name in keyword.kwlist:
                 continue
