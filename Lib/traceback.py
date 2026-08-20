@@ -1459,11 +1459,15 @@ class TracebackException:
             return  # Original code compiles or is incomplete - can't validate fixes
 
         error_lines = error_code.splitlines()
-        tokens = [
-            token
-            for token in tokenize.generate_tokens(io.StringIO(error_code).readline)
-            if token.type == tokenize.NAME
-        ]
+        tokens = []
+        token_stream = tokenize.generate_tokens(io.StringIO(error_code).readline)
+        try:
+            for token in token_stream:
+                if token.type == tokenize.NAME:
+                    tokens.append(token)
+        except tokenize.TokenError:
+            # Incomplete input can still contain useful tokens.
+            pass
         # Look for typos on the reported error line first. If the parser only
         # fails after an earlier typo, the remaining lines are still searched.
         the_end = end_line if line == 0 else end_line + 1
